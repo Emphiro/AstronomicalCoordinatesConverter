@@ -6,10 +6,22 @@ import pickle
 from datetime import datetime
 from astropy.time import Time
 
+
 # constants
 
 TIME_2000 = 2451545.0
 PI2 = 2 * math.pi
+
+
+# Global Variables (set in init_values)
+
+output_degrees = False
+use_current_time = True
+time = None
+ra = None
+dec = None
+lon = None
+lat = None
 
 
 # date conversions
@@ -50,7 +62,9 @@ def rad_to_deg(rad):
 
 
 def deg_to_dms(degrees):
-    """convert degrees to degrees, arcminutes and arcseconds"""
+    """convert degrees to degrees, arcminutes and arcseconds if output_degrees = False"""
+    if output_degrees:
+        return "{:.4f}".format(degrees)
     sign = -1 if degrees < 0 else 1
     degrees = abs(degrees)
     degs = math.floor(degrees)
@@ -60,7 +74,9 @@ def deg_to_dms(degrees):
 
 
 def deg_to_hms(degrees):
-    """convert degrees to hours, minutes and seconds"""
+    """convert degrees to hours, minutes and seconds  if output_degrees = False"""
+    if output_degrees:
+        return "{:.4f}".format(degrees)
     sign = -1 if degrees < 0 else 1
     degrees = abs(degrees)
     degrees = (degrees / 360) * 24
@@ -68,16 +84,6 @@ def deg_to_hms(degrees):
     mins = math.floor((degrees - degs) * 60)
     secs = (((degrees - degs) * 60) - mins) * 60
     return "{}h {}m {:.2f}s".format(sign * degs, mins, secs)
-
-
-# Global Variables
-
-use_current_time = True
-time = normal_time_to_utc(2020, 12, 23, 7, 34, 34.5)
-ra = hms_to_deg(13, 37, 0.919)
-dec = dms_to_deg(-29, 51, 56.74)
-lon = dms_to_deg(10, 53, 22)
-lat = dms_to_deg(49, 53, 6)
 
 
 # Getter and Setter functions
@@ -96,7 +102,7 @@ def get_time_jd():
         return time.jd
 
 
-def set_time(*new_time):
+def set_time(*new_time, utc=False):
     """new_time as *[year, month, day, hour, minute, second]"""
     global use_current_time
     use_current_time = False
@@ -113,21 +119,25 @@ def set_time_utc(new_time):
     time = new_time
 
 
-def set_ra(*new_ra):
+def set_ra(*new_ra, degrees=False):
     """new_ra as *[hours, minutes, seconds]"""
     global ra
+    if degrees:
+        print("Set deg")
+        ra = new_ra[0]
+        return deg_to_hms(ra)
     ra = hms_to_deg(new_ra[0], new_ra[1], new_ra[2])
     return deg_to_hms(ra)
 
 
-def set_ra_deg(new_ra):
+def set_ra_deg(new_ra, degrees=False):
     """new_ra in degrees"""
     global ra
     ra = new_ra
     return ra
 
 
-def set_dec(*new_dec):
+def set_dec(*new_dec, degrees=False):
     """new_dec as *[degrees, arcminutes, arcseconds]"""
     global dec
     dec = dms_to_deg(new_dec[0], new_dec[1], new_dec[2])
@@ -141,7 +151,7 @@ def set_dec_deg(new_dec):
     return dec
 
 
-def set_lon(*new_lon):
+def set_lon(*new_lon, degrees=False):
     """new_lon as *[degrees, arcminutes, arcseconds]"""
     global lon
     lon = dms_to_deg(new_lon[0], new_lon[1], new_lon[2])
@@ -155,7 +165,7 @@ def set_lon_deg(new_lon):
     return lon
 
 
-def set_lat(*new_lat):
+def set_lat(*new_lat, degrees=False):
     """new_lat as *[degrees, arcminutes, arcseconds]"""
     global lat
     lat = dms_to_deg(new_lat[0], new_lat[1], new_lat[2])
@@ -263,10 +273,18 @@ examples_old = [
         ra=hms_to_deg(13, 37, 0.919),
         dec=dms_to_deg(-29, 51, 56.74),
         lon=dms_to_deg(10, 53, 22),
-        lat=dms_to_deg(49, 53, 6))
+        lat=dms_to_deg(49, 53, 6)),
+
 ]
 
 configurations = [
+    Configuration(
+        time=normal_time_to_utc(2020, 12, 23, 7, 34, 34.5),
+        ra=hms_to_deg(13, 37, 0.919),
+        dec=dms_to_deg(-29, 51, 56.74),
+        lon=dms_to_deg(10, 53, 22),
+        lat=dms_to_deg(49, 53, 6)),
+
     Configuration(
         time=normal_time_to_utc(2021, 2, 7, 22, 23, 24),
         ra=hms_to_deg(18, 18, 48),
@@ -281,12 +299,6 @@ configurations = [
         lon=dms_to_deg(10, 53, 22),
         lat=dms_to_deg(49, 53, 6)),
 
-    Configuration(
-        time=normal_time_to_utc(2020, 12, 23, 7, 34, 34.5),
-        ra=hms_to_deg(13, 37, 0.919),
-        dec=dms_to_deg(-29, 51, 56.74),
-        lon=dms_to_deg(10, 53, 22),
-        lat=dms_to_deg(49, 53, 6))
 ]
 
 
@@ -373,10 +385,11 @@ def change_value(inputString):
         "ctime": [set_time, "time", "Time"]
     }
     questions_list = {
-        "hms": ["hours?", "minutes?", "seconds?"],
-        "dms": ["degrees?", "arcminutes?", "arcseconds?"],
-        "time": ["year?", "month?", "day?", "hour?", "minute?", "second?"]
+        "hms": ["hours? ", "minutes? ", "seconds? "],
+        "dms": ["degrees? ", "arcminutes? ", "arcseconds? "],
+        "time": ["year? ", "month? ", "day? ", "hour? ", "minute? ", "second? "]
     }
+
     input_arr = inputString.split()
     set_func = types[input_arr[0]][0]
     request_type = types[input_arr[0]][1]
@@ -384,15 +397,25 @@ def change_value(inputString):
 
     questions = questions_list[request_type]
     values = [0, 0, 0, 0, 0, 0]
-
+    in_degrees = (len(input_arr) == 2)
     try:
-        if 1 < len(input_arr) <= len(questions) + 1:
+        if in_degrees and request_type != "time":
+            values[0] = float(input_arr[1])
+        elif 1 < len(input_arr) <= len(questions) + 1:
             for [i, value] in enumerate(input_arr[1:]):
                 values[i] = int(value)
         else:
             for [i, question] in enumerate(questions[:-1]):
-                values[i] = int(input(question))
-            values[len(questions) - 1] = float(input(questions[-1]))
+                answer = input(question)
+                if answer == '':
+                    values[i] = 0
+                else:
+                    values[i] = int(answer)
+            answer = input(questions[-1])
+            if answer == '':
+                values[len(questions) - 1] = 0
+            else:
+                values[len(questions) - 1] = float(answer)
 
     except ValueError as er:
         print(er)
@@ -402,7 +425,7 @@ def change_value(inputString):
     except EOFError:
         return
     try:
-        value = set_func(*values)
+        value = set_func(*values, degrees=in_degrees)
     except ValueError as er:
         print(er)
         print("Invalid Value. Please try again")
@@ -450,8 +473,12 @@ def execute(inputString):
     print_solution(era, az, el)
 
 
-def not_available(inputString):
-    print("Someone has not yet implemented this function :(")
+def change_output_mode(input_string):
+    global output_degrees
+    output_degrees = not output_degrees
+    output = "Output will be given in degrees" if output_degrees else \
+        "Output will be given in degrees arc-minutes and arc-seconds"
+    print(output)
 
 
 def exec_configuration(num):
@@ -483,6 +510,20 @@ def print_help(inputString):
         print(textwrap.indent(description, "    "))
 
 
+def init_values():
+    global use_current_time
+    use_current_time = True
+    set_time(2020, 12, 23, 7, 34, 34.5)
+    set_ra(13, 37, 0.919)
+    set_dec(-29, 51, 56.74)
+    set_lon(10, 53, 22)
+    set_lat(49, 53, 6)
+
+
+def not_available(inputString):
+    print("Someone has not yet implemented this function :(")
+
+
 available_commands = {
     "ctime": "Change the time",
     "cra": "Change the right ascension",
@@ -496,7 +537,8 @@ available_commands = {
     "save": "Save the current configurations",
     "load": "Load one of the saved configurations",
     "lse": "List all the saved configurations",
-    "rm": "Remove the selected configuration"
+    "rm": "Remove the selected configuration",
+    "co": "Toggles output mode between degrees and degree:arc-minute:arc-second"
 }
 
 executable_commands = {
@@ -513,17 +555,18 @@ executable_commands = {
     "save": add_config,
     "load": load,
     "lse": list_configurations,
-    "rm": remove_config
+    "rm": remove_config,
+    "co": change_output_mode
 }
 
 
-def inputloop():
-    inputString = input("> ")
-    if len(inputString) == 0:
+def input_loop():
+    input_string = input("> ")
+    if len(input_string) == 0:
         return
     try:
-        command = executable_commands[inputString.split()[0]]
-        command(inputString)
+        command = executable_commands[input_string.split()[0]]
+        command(input_string)
     except KeyError:
         print("No matching command found. Type help for a list of commands")
 
@@ -537,19 +580,20 @@ def main():
         if arg == "-h":
             print_help("")
             return
+    init_values()
     try:
         load_from_file()
     except FileNotFoundError:
         global configurations
         configurations = examples_old
-        print("No file was found. Loading basic configurations")
+        print("No file was found. Loading basic configurations", file=sys.stderr)
 
     print("Welcome to this coordinates converter program!")
     print()
     print("Type help for a list of commands")
     while 1:
         try:
-            inputloop()
+            input_loop()
         except EOFError:
             break
         except KeyboardInterrupt:
