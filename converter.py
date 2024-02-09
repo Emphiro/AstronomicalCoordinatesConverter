@@ -104,6 +104,8 @@ def get_time_jd():
 
 def set_time(*new_time, utc=False):
     """new_time as *[year, month, day, hour, minute, second]"""
+    if utc:
+        set_time_utc(new_time[0])
     global use_current_time
     use_current_time = False
     global time
@@ -130,7 +132,7 @@ def set_ra(*new_ra, degrees=False):
     return deg_to_hms(ra)
 
 
-def set_ra_deg(new_ra, degrees=False):
+def set_ra_deg(new_ra):
     """new_ra in degrees"""
     global ra
     ra = new_ra
@@ -361,11 +363,11 @@ def load(input_string):
         return
     if len(configurations) > num >= 0:
         ex = configurations[num]
-        set_time_utc(ex.time)
-        set_ra_deg(ex.ra)
-        set_dec_deg(ex.dec)
-        set_lon_deg(ex.lon)
-        set_lat_deg(ex.lat)
+        set_time_utc(new_time=ex.time)
+        set_ra_deg(new_ra=ex.ra)
+        set_dec_deg(new_dec=ex.dec)
+        set_lon_deg(new_lon=ex.lon)
+        set_lat_deg(new_lat=ex.lat)
     else:
         print("Please specify a configuration between 1 and {}".format(len(configurations)))
         return
@@ -397,9 +399,9 @@ def change_value(inputString):
 
     questions = questions_list[request_type]
     values = [0, 0, 0, 0, 0, 0]
-    in_degrees = (len(input_arr) == 2)
+    in_degrees = (len(input_arr) == 2) and request_type != "time"
     try:
-        if in_degrees and request_type != "time":
+        if in_degrees:
             values[0] = float(input_arr[1])
         elif 1 < len(input_arr) <= len(questions) + 1:
             for [i, value] in enumerate(input_arr[1:]):
@@ -425,7 +427,7 @@ def change_value(inputString):
     except EOFError:
         return
     try:
-        value = set_func(*values, degrees=in_degrees)
+        value = set_func(in_degrees, *values)
     except ValueError as er:
         print(er)
         print("Invalid Value. Please try again")
