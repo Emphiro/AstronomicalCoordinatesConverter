@@ -1,9 +1,9 @@
-import numpy as np
 import math
 import sys
 import textwrap
 import pickle
 from datetime import datetime
+import numpy as np
 from astropy.time import Time
 
 
@@ -26,25 +26,27 @@ lat = None
 
 # date conversions
 
-def normal_time_to_utc(year, month, day, hour, min, sec):
+def normal_time_to_utc(year, month, day, hour, minutes, sec):
     """convert time in year-month-day hour:minutes:seconds format to Time object"""
-    return Time("{}-{}-{}T{}:{}:{}".format(year, month, day, hour, min, sec), format="isot", scale="utc")
+    return Time("{}-{}-{}T{}:{}:{}".format(year, month, day, hour, minutes, sec),
+                format="isot", scale="utc")
 
 
 # angle conversions
 
-def dms_to_deg(deg, min, sec):
+def dms_to_deg(deg, minute, sec):
     """convert degrees, arcminutes and arcseconds to degrees"""
+    print("Test")
     sign = -1 if deg < 0 else 1
     deg = abs(deg)
-    return sign * deg + sign * min / 60 + sign * sec / (60 ** 2)
+    return sign * deg + sign * minute / 60 + sign * sec / (60 ** 2)
 
 
-def hms_to_deg(hour, min, sec):
+def hms_to_deg(hour, minute, sec):
     """convert hours, minutes and seconds to degrees"""
     sign = -1 if hour < 0 else 1
     hour = abs(hour)
-    return ((sign * hour + sign * min / 60 + sign * sec / (60 ** 2)) / 24) * 360
+    return ((sign * hour + sign * minute / 60 + sign * sec / (60 ** 2)) / 24) * 360
 
 
 def angle_to_gmst(theta):
@@ -70,11 +72,19 @@ def deg_to_dms(degrees):
     degs = math.floor(degrees)
     mins = math.floor((degrees - degs) * 60)
     secs = (((degrees - degs) * 60) - mins) * 60
+    # edge case: secs = 60.00
+    if round(secs, 2) == 60.00:
+        secs = 0
+        mins += 1
+    # edge case: mins = 60
+    if mins == 60:
+        mins = 0
+        degrees += 1
     return "{}d {}m {:.2f}s".format(sign * degs, mins, secs)
 
 
 def deg_to_hms(degrees):
-    """convert degrees to hours, minutes and seconds  if output_degrees = False"""
+    """convert degrees to hours, minutes and seconds if output_degrees = False"""
     if output_degrees:
         return "{:.4f}".format(degrees)
     sign = -1 if degrees < 0 else 1
@@ -83,12 +93,21 @@ def deg_to_hms(degrees):
     degs = math.floor(degrees)
     mins = math.floor((degrees - degs) * 60)
     secs = (((degrees - degs) * 60) - mins) * 60
+    # edge case: secs = 60.00
+    if round(secs, 2) == 60.00:
+        secs = 0
+        mins += 1
+    # edge case: mins = 60
+    if mins == 60:
+        mins = 0
+        degrees += 1
     return "{}h {}m {:.2f}s".format(sign * degs, mins, secs)
 
 
 # Getter and Setter functions
 
 def get_time():
+    """Return an astropy time object"""
     if use_current_time:
         return Time(datetime.now())
     else:
@@ -96,10 +115,10 @@ def get_time():
 
 
 def get_time_jd():
+    """Return the time in julian days"""
     if use_current_time:
         return Time(datetime.now()).jd
-    else:
-        return time.jd
+    return time.jd
 
 
 def set_time(*new_time, utc=False):
@@ -109,7 +128,8 @@ def set_time(*new_time, utc=False):
     global use_current_time
     use_current_time = False
     global time
-    time = normal_time_to_utc(new_time[0], new_time[1], new_time[2], new_time[3], new_time[4], new_time[5])
+    time = normal_time_to_utc(
+        new_time[0], new_time[1], new_time[2], new_time[3], new_time[4], new_time[5])
     return time
 
 
@@ -216,8 +236,8 @@ def compute_ry(phi):
 
 
 def compute_azimuth_elevation(time_jd, ra_deg, dec_deg, lon_deg, lat_deg):
-    """compute era, azimut and elevation from time in julian days and right ascension, declination, longitude and
-    latitude in degrees"""
+    """compute era, azimuth and elevation from time in julian days and
+    right ascension, declination, longitude and latitude in degrees"""
     ra = deg_to_rad(ra_deg) % PI2
     dec = deg_to_rad(dec_deg) % PI2
     lat = deg_to_rad(lat_deg) % PI2
@@ -249,7 +269,8 @@ class Configuration:
         self.lat = lat
 
     def __str__(self):
-        return (f"Time: {self.time}\nRight Ascension: {deg_to_hms(self.ra)}\nDeclination: {deg_to_dms(self.dec)}\nLongitude: {deg_to_dms(self.lon)}"
+        return (f"Time: {self.time}\nRight Ascension: {deg_to_hms(self.ra)}\n"
+                f"Declination: {deg_to_dms(self.dec)}\nLongitude: {deg_to_dms(self.lon)}"
                 f"\nLatitude: {deg_to_dms(self.lat)}")
 
 
@@ -378,7 +399,7 @@ def print_solution(era, az, el):
     print("Era: {:.4f}\nAzimuth: {}\nElevation: {}".format(era, az, el))
 
 
-def change_value(inputString):
+def change_value(input_string):
     types = {
         "clat": [set_lat, "dms", "Latitude"],
         "clon": [set_lon, "dms", "Longitude"],
@@ -392,7 +413,7 @@ def change_value(inputString):
         "time": ["year? ", "month? ", "day? ", "hour? ", "minute? ", "second? "]
     }
 
-    input_arr = inputString.split()
+    input_arr = input_string.split()
     set_func = types[input_arr[0]][0]
     request_type = types[input_arr[0]][1]
     name = types[input_arr[0]][2]
@@ -422,33 +443,33 @@ def change_value(inputString):
     except ValueError as er:
         print(er)
         print("Invalid Value. Please try again")
-        change_value(inputString.split()[0])
+        change_value(input_string.split()[0])
         return
     except EOFError:
         return
     try:
-        value = set_func(in_degrees, *values)
+        value = set_func(*values, degrees=in_degrees)
     except ValueError as er:
         print(er)
         print("Invalid Value. Please try again")
-        change_value(inputString.split()[0])
+        change_value(input_string.split()[0])
         return
     print("Set {} to {}".format(name, value))
 
 
-def reset_location(inputString):
+def reset_location(input_string):
     set_lon(10, 53, 22)
     set_lat(49, 53, 6)
     print("set Location to remeis observatory")
 
 
-def reset_time(inputString):
+def reset_time(input_string):
     global use_current_time
     use_current_time = True
     print("set Time to current time")
 
 
-def list_values(inputString):
+def list_values(input_string):
     print("Time set to {}".format(get_time()))
     print("Right Ascension set to {}".format(deg_to_hms(ra)))
     print("Declination set to {}".format(deg_to_dms(dec)))
@@ -456,15 +477,15 @@ def list_values(inputString):
     print("Latitude set to {}".format(deg_to_dms(lat)))
 
 
-def list_configurations(inputString):
+def list_configurations(input_string):
     for (i, ex) in enumerate(configurations):
         print("Configuration {}:".format(i+1))
         print(textwrap.indent(str(ex), "    "))
 
 
-def execute(inputString):
-    if len(inputString.split()) > 1:
-        exec_configuration(inputString.split()[1])
+def execute(input_string):
+    if len(input_string.split()) > 1:
+        exec_configuration(input_string.split()[1])
         return
     time_jd = get_time_jd()
     ra_deg = ra
@@ -505,7 +526,7 @@ def exec_configuration(num):
         print("Please specify an configuration between 1 and {}".format(len(configurations)))
 
 
-def print_help(inputString):
+def print_help(input_string):
     print("Available commands:")
     for [command, description] in available_commands.items():
         print(command + ":")
@@ -522,7 +543,7 @@ def init_values():
     set_lat(49, 53, 6)
 
 
-def not_available(inputString):
+def not_available(input_string):
     print("Someone has not yet implemented this function :(")
 
 
