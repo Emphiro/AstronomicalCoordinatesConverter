@@ -13,17 +13,6 @@ TIME_2000 = 2451545.0
 PI2 = 2 * math.pi
 
 
-# Global Variables (set in init_values)
-
-output_degrees = False
-use_current_time = True
-time = None
-ra = None
-dec = None
-lon = None
-lat = None
-
-
 # date conversions
 
 def normal_time_to_utc(year, month, day, hour, minutes, sec):
@@ -36,7 +25,6 @@ def normal_time_to_utc(year, month, day, hour, minutes, sec):
 
 def dms_to_deg(deg, minute, sec):
     """convert degrees, arcminutes and arcseconds to degrees"""
-    print("Test")
     sign = -1 if deg < 0 else 1
     deg = abs(deg)
     return sign * deg + sign * minute / 60 + sign * sec / (60 ** 2)
@@ -111,14 +99,14 @@ def get_time():
     if use_current_time:
         return Time(datetime.now())
     else:
-        return time
+        return current_config.time
 
 
 def get_time_jd():
     """Return the time in julian days"""
     if use_current_time:
         return Time(datetime.now()).jd
-    return time.jd
+    return current_config.time.jd
 
 
 def set_time(*new_time, utc=False):
@@ -127,78 +115,74 @@ def set_time(*new_time, utc=False):
         set_time_utc(new_time[0])
     global use_current_time
     use_current_time = False
-    global time
-    time = normal_time_to_utc(
+    global current_config
+    current_config.time = normal_time_to_utc(
         new_time[0], new_time[1], new_time[2], new_time[3], new_time[4], new_time[5])
-    return time
+    return current_config.time
 
 
 def set_time_utc(new_time):
     """new_time as Time object"""
     global use_current_time
     use_current_time = False
-    global time
-    time = new_time
+    global current_config
+    current_config.time = new_time
 
 
 def set_ra(*new_ra, degrees=False):
     """new_ra as *[hours, minutes, seconds]"""
-    global ra
+    global current_config
     if degrees:
-        print("Set deg")
-        ra = new_ra[0]
-        return deg_to_hms(ra)
-    ra = hms_to_deg(new_ra[0], new_ra[1], new_ra[2])
-    return deg_to_hms(ra)
+        current_config.ra = new_ra[0]
+        return deg_to_hms(current_config.ra)
+    current_config.ra = hms_to_deg(new_ra[0], new_ra[1], new_ra[2])
+    return deg_to_hms(current_config.ra)
 
 
-def set_ra_deg(new_ra):
-    """new_ra in degrees"""
-    global ra
-    ra = new_ra
-    return ra
+def get_ra():
+    return current_config.ra
 
 
 def set_dec(*new_dec, degrees=False):
     """new_dec as *[degrees, arcminutes, arcseconds]"""
-    global dec
-    dec = dms_to_deg(new_dec[0], new_dec[1], new_dec[2])
-    return deg_to_dms(dec)
+    global current_config
+    if degrees:
+        current_config.dec = new_dec[0]
+        return deg_to_dms(current_config.dec)
+    current_config.dec = dms_to_deg(new_dec[0], new_dec[1], new_dec[2])
+    return deg_to_dms(current_config.dec)
 
 
-def set_dec_deg(new_dec):
-    """new_dec in degrees"""
-    global dec
-    dec = new_dec
-    return dec
+def get_dec():
+    return current_config.dec
 
 
 def set_lon(*new_lon, degrees=False):
     """new_lon as *[degrees, arcminutes, arcseconds]"""
-    global lon
-    lon = dms_to_deg(new_lon[0], new_lon[1], new_lon[2])
-    return deg_to_dms(lon)
+    global current_config
+    if degrees:
+        current_config.lon = new_lon[0]
+        return deg_to_dms(current_config.lon)
+    current_config.lon = dms_to_deg(new_lon[0], new_lon[1], new_lon[2])
+    return deg_to_dms(current_config.lon)
 
 
-def set_lon_deg(new_lon):
-    """new_lon in degrees"""
-    global lon
-    lon = new_lon
-    return lon
+def get_lon():
+    return current_config.lon
 
 
 def set_lat(*new_lat, degrees=False):
     """new_lat as *[degrees, arcminutes, arcseconds]"""
-    global lat
-    lat = dms_to_deg(new_lat[0], new_lat[1], new_lat[2])
-    return deg_to_dms(lat)
+    global current_config
+    if degrees:
+        current_config.lat = new_lat[0]
+        return deg_to_dms(current_config.lat)
+    current_config.lat = dms_to_deg(new_lat[0], new_lat[1], new_lat[2])
+    return deg_to_dms(current_config.lat)
 
 
-def set_lat_deg(new_lat):
-    """new_lat in degrees"""
-    global lat
-    lat = new_lat
-    return lat
+def get_lat():
+    return current_config.lat
 
 
 # Actual computation
@@ -341,10 +325,10 @@ def load_from_file():
 def add_config(input_string):
     ex = Configuration(
         time=get_time(),
-        ra=ra,
-        dec=dec,
-        lon=lon,
-        lat=lat)
+        ra=get_ra(),
+        dec=get_dec(),
+        lon=get_lon(),
+        lat=get_lat())
     configurations.append(ex)
     print("Saved as Configuration {}".format(len(configurations)))
 
@@ -385,10 +369,10 @@ def load(input_string):
     if len(configurations) > num >= 0:
         ex = configurations[num]
         set_time_utc(new_time=ex.time)
-        set_ra_deg(new_ra=ex.ra)
-        set_dec_deg(new_dec=ex.dec)
-        set_lon_deg(new_lon=ex.lon)
-        set_lat_deg(new_lat=ex.lat)
+        set_ra(ex.ra, degrees=True)
+        set_dec(ex.dec, degrees=True)
+        set_lon(ex.lon, degrees=True)
+        set_lat(ex.lat, degrees=True)
     else:
         print("Please specify a configuration between 1 and {}".format(len(configurations)))
         return
@@ -471,10 +455,10 @@ def reset_time(input_string):
 
 def list_values(input_string):
     print("Time set to {}".format(get_time()))
-    print("Right Ascension set to {}".format(deg_to_hms(ra)))
-    print("Declination set to {}".format(deg_to_dms(dec)))
-    print("Longitude set to {}".format(deg_to_dms(lon)))
-    print("Latitude set to {}".format(deg_to_dms(lat)))
+    print("Right Ascension set to {}".format(deg_to_hms(get_ra())))
+    print("Declination set to {}".format(deg_to_dms(get_dec())))
+    print("Longitude set to {}".format(deg_to_dms(get_lon())))
+    print("Latitude set to {}".format(deg_to_dms(get_lat())))
 
 
 def list_configurations(input_string):
@@ -488,10 +472,10 @@ def execute(input_string):
         exec_configuration(input_string.split()[1])
         return
     time_jd = get_time_jd()
-    ra_deg = ra
-    dec_deg = dec
-    lon_deg = lon
-    lat_deg = lat
+    ra_deg = get_ra()
+    dec_deg = get_dec()
+    lon_deg = get_lon()
+    lat_deg = get_lat()
     [era, az, el] = compute_azimuth_elevation(time_jd, ra_deg, dec_deg, lon_deg, lat_deg)
     print_solution(era, az, el)
 
@@ -592,6 +576,18 @@ def input_loop():
         command(input_string)
     except KeyError:
         print("No matching command found. Type help for a list of commands")
+
+
+# Global Variables (set in init_values)
+
+output_degrees = False
+use_current_time = True
+current_config = Configuration(
+        time=normal_time_to_utc(2021, 1, 7, 0, 0, 0),
+        ra=hms_to_deg(2, 31, 49.09),
+        dec=dms_to_deg(89, 15, 50.8),
+        lon=dms_to_deg(10, 53, 22),
+        lat=dms_to_deg(49, 53, 6))
 
 
 def main():
