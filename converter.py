@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import math
 import sys
 import textwrap
@@ -11,7 +13,7 @@ from astropy.time import Time
 
 TIME_2000 = 2451545.0
 PI2 = 2 * math.pi
-
+DEBUG_MODE = False
 
 # date conversions
 
@@ -109,9 +111,9 @@ def get_time_jd():
     return current_config.time.jd
 
 
-def set_time(*new_time, utc=False):
+def set_time(*new_time, single_value=False):
     """new_time as *[year, month, day, hour, minute, second]"""
-    if utc:
+    if single_value:
         set_time_utc(new_time[0])
     global use_current_time
     use_current_time = False
@@ -129,10 +131,10 @@ def set_time_utc(new_time):
     current_config.time = new_time
 
 
-def set_ra(*new_ra, degrees=False):
+def set_ra(*new_ra, single_value=False):
     """new_ra as *[hours, minutes, seconds]"""
     global current_config
-    if degrees:
+    if single_value:
         current_config.ra = new_ra[0]
         return deg_to_hms(current_config.ra)
     current_config.ra = hms_to_deg(new_ra[0], new_ra[1], new_ra[2])
@@ -143,10 +145,10 @@ def get_ra():
     return current_config.ra
 
 
-def set_dec(*new_dec, degrees=False):
+def set_dec(*new_dec, single_value=False):
     """new_dec as *[degrees, arcminutes, arcseconds]"""
     global current_config
-    if degrees:
+    if single_value:
         current_config.dec = new_dec[0]
         return deg_to_dms(current_config.dec)
     current_config.dec = dms_to_deg(new_dec[0], new_dec[1], new_dec[2])
@@ -157,10 +159,10 @@ def get_dec():
     return current_config.dec
 
 
-def set_lon(*new_lon, degrees=False):
+def set_lon(*new_lon, single_value=False):
     """new_lon as *[degrees, arcminutes, arcseconds]"""
     global current_config
-    if degrees:
+    if single_value:
         current_config.lon = new_lon[0]
         return deg_to_dms(current_config.lon)
     current_config.lon = dms_to_deg(new_lon[0], new_lon[1], new_lon[2])
@@ -171,10 +173,10 @@ def get_lon():
     return current_config.lon
 
 
-def set_lat(*new_lat, degrees=False):
+def set_lat(*new_lat, single_value=False):
     """new_lat as *[degrees, arcminutes, arcseconds]"""
     global current_config
-    if degrees:
+    if single_value:
         current_config.lat = new_lat[0]
         return deg_to_dms(current_config.lat)
     current_config.lat = dms_to_deg(new_lat[0], new_lat[1], new_lat[2])
@@ -369,10 +371,10 @@ def load(input_string):
     if len(configurations) > num >= 0:
         ex = configurations[num]
         set_time_utc(new_time=ex.time)
-        set_ra(ex.ra, degrees=True)
-        set_dec(ex.dec, degrees=True)
-        set_lon(ex.lon, degrees=True)
-        set_lat(ex.lat, degrees=True)
+        set_ra(ex.ra, single_value=True)
+        set_dec(ex.dec, single_value=True)
+        set_lon(ex.lon, single_value=True)
+        set_lat(ex.lat, single_value=True)
     else:
         print("Please specify a configuration between 1 and {}".format(len(configurations)))
         return
@@ -432,7 +434,7 @@ def change_value(input_string):
     except EOFError:
         return
     try:
-        value = set_func(*values, degrees=in_degrees)
+        value = set_func(*values, single_value=in_degrees)
     except ValueError as er:
         print(er)
         print("Invalid Value. Please try again")
@@ -545,7 +547,7 @@ available_commands = {
     "load": "Load one of the saved configurations",
     "lse": "List all the saved configurations",
     "rm": "Remove the selected configuration",
-    "co": "Toggles output mode between degrees and degree:arc-minute:arc-second"
+    "co": "Toggles output mode between degrees and degree:arc-minute:arc-second",
 }
 
 executable_commands = {
@@ -563,7 +565,8 @@ executable_commands = {
     "load": load,
     "lse": list_configurations,
     "rm": remove_config,
-    "co": change_output_mode
+    "co": change_output_mode,
+    #"test": 1
 }
 
 
@@ -591,6 +594,7 @@ current_config = Configuration(
 
 
 def main():
+    global DEBUG_MODE
     if len(sys.argv) > 1:
         arg = sys.argv[1]
         if arg == "-e":
@@ -599,14 +603,19 @@ def main():
         if arg == "-h":
             print_help("")
             return
+        if arg == "-d":
+            DEBUG_MODE = True
     init_values()
-    try:
-        load_from_file()
-    except FileNotFoundError:
-        global configurations
-        configurations = examples_old
-        print("No file was found. Loading basic configurations", file=sys.stderr)
 
+    if not DEBUG_MODE:
+        try:
+            load_from_file()
+        except FileNotFoundError:
+            global configurations
+            configurations = examples_old
+            print("No file was found. Loading basic configurations", file=sys.stderr)
+    else:
+        configurations = examples_old
     print("Welcome to this coordinates converter program!")
     print()
     print("Type help for a list of commands")
@@ -617,7 +626,8 @@ def main():
             break
         except KeyboardInterrupt:
             break
-    save_to_file()
+    if not DEBUG_MODE:
+        save_to_file()
 
 
 if __name__ == "__main__":

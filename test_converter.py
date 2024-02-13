@@ -2,7 +2,8 @@ import converter as conv
 import math
 from random import uniform
 from math import floor
-
+import subprocess
+import time
 
 EPSILON = 1e-3
 
@@ -21,7 +22,7 @@ def test_conversions():
         assert equals(conv.rad_to_deg(conv.deg_to_rad(rand)), rand)
         rand = uniform(0, 2 * math.pi)
         assert equals(conv.deg_to_rad(conv.rad_to_deg(rand)), rand)
-    
+
     # dms_to_deg deg_to_dms
     assert equals(conv.dms_to_deg(34, 2, 43), 34.045277)
     for i in range(0, num_tests):
@@ -36,9 +37,9 @@ def test_conversions():
         min = floor(uniform(0, 59))
         sec = floor(uniform(0, 59))
         assert conv.deg_to_hms(conv.hms_to_deg(deg, min, sec)) == '{}h {}m {:.2f}s'.format(deg, min, sec)
-    
+
     # normal_time_to_utc
-    assert str(conv.normal_time_to_utc(2023, 1, 23, 12, 3, 1)) == '2023-01-23T12:03:01.000' 
+    assert str(conv.normal_time_to_utc(2023, 1, 23, 12, 3, 1)) == '2023-01-23T12:03:01.000'
 
 
 def test_getter_setter():
@@ -62,10 +63,10 @@ def test_getter_setter():
         conv.set_lat(deg, min, sec)
         assert equals(conv.get_lat(), conv.dms_to_deg(deg, min, sec))
 
-    conv.set_ra(ra, degrees=True)
-    conv.set_dec(dec, degrees=True)
-    conv.set_lon(lon, degrees=True)
-    conv.set_lat(lat, degrees=True)
+    conv.set_ra(ra, single_value=True)
+    conv.set_dec(dec, single_value=True)
+    conv.set_lon(lon, single_value=True)
+    conv.set_lat(lat, single_value=True)
     assert equals(conv.get_ra(), ra)
     assert equals(conv.get_dec(), dec)
     assert equals(conv.get_lat(), lat)
@@ -75,6 +76,7 @@ def test_getter_setter():
     time = conv.get_time()
     conv.set_time_utc(time)
     assert equals(time.jd, conv.get_time_jd())
+    print("test")
 
 
 def test_computation():
@@ -88,9 +90,6 @@ def test_computation():
     assert az == "190d 48m 46.54s"
     assert el == "9d 30m 3.37s"
 
-import subprocess
-import time
-
 
 def write(p, line):
     assert p.poll() is None, "Program terminated early"
@@ -98,20 +97,43 @@ def write(p, line):
     p.stdin.flush()
 
 
+def read(p):
+    assert p.poll() is None, "Program terminated early"
+    line = p.stdout.readline()
+    return line
+
+
 def test_io():
-    with subprocess.Popen(
-            "python3 converter.py",
-            shell=True,
-            stdout=subprocess.PIPE,
-            stdin=subprocess.PIPE,
-            universal_newlines=True,
-    ) as p:
-        try:
-            for [command, description] in conv.available_commands.items():
-                write(p, command)
-                time.sleep(1)
+    for [command_name, function] in conv.executable_commands.items():
+        with subprocess.Popen(
+                "python3 converter.py -d",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stdin=subprocess.PIPE,
+                universal_newlines=True,
+        ) as p:
+
+            num_lines = 3
+            # Not working
+            for i in range(num_lines):
+                line = p.stdout.readline()
+                #print(line)
+            if command_name == "ctime":
+                write(p, f"{command_name} 2022 10 10")
+            elif command_name == "rm":
+                write(p, f"{command_name} 1")
+                write(p, "y")
+            else:
+                write(p, f"{command_name} 10")
+            #print(command_name)
+            line = read(p)
+            #print(line)
+            assert (line != ""), "Read empty line or closed output pipe"
+
+            time.sleep(0.1)
+            assert p.poll() is None, "Program terminated early"
+            # write(p, "help")
             p.stdin.close()
-        except Exception:
-            assert False
 
 
+test_io()
