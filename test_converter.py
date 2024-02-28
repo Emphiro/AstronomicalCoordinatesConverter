@@ -29,7 +29,7 @@ def test_conversions():
         deg = floor(uniform(0, 359))
         min = floor(uniform(0, 59))
         sec = floor(uniform(0, 59))
-        assert conv.deg_to_dms(conv.dms_to_deg(deg, min, sec)) == '{}d {}m {:.2f}s'.format(deg, min, sec)
+        assert conv.deg_to_dms(conv.dms_to_deg(deg, min, sec)) == '{}° {}\' {:.2f}\"'.format(deg, min, sec)
 
     # hms_to_deg deg_to_hms
     for i in range(0, num_tests):
@@ -87,8 +87,8 @@ def test_computation():
     lat = conv.dms_to_deg(49, 53, 6)
     [era, az, el] = conv.compute_azimuth_elevation(time, ra, dec, lon, lat)
     assert equals(era, 205.6840)
-    assert az == "190d 48m 46.54s"
-    assert el == "9d 30m 3.37s"
+    assert equals(az, 190.8129)
+    assert equals(el, 9.5009)
 
 
 def write(p, line):
