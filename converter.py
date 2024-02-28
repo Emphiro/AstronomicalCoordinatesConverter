@@ -9,12 +9,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from astropy.time import Time
 
-
 # constants
 
 TIME_2000: float = 2451545.0
 PI2: float = 2 * math.pi
 DEBUG_MODE: bool = False
+
 
 # date conversions
 
@@ -223,7 +223,8 @@ def compute_ry(phi: float) -> np.ndarray:
     return np.array([[cos, 0, -sin], [0, 1, 0], [sin, 0, cos]])
 
 
-def compute_azimuth_elevation(time_jd: float, ra_deg: float, dec_deg: float, lon_deg: float, lat_deg: float) -> list:
+def compute_azimuth_elevation(time_jd: float, ra_deg: float, dec_deg: float,
+                              lon_deg: float, lat_deg: float) -> list:
     """compute era, azimuth and elevation from time in julian days and
     right ascension, declination, longitude and latitude in degrees"""
     ra: float = deg_to_rad(ra_deg) % PI2
@@ -264,69 +265,54 @@ class Configuration:
 
 # The Example testcases
 
-examples_old = [
-    Configuration(
+examples_old = {
+    "config1": Configuration(
         time=normal_time_to_utc(2021, 2, 7, 22, 23, 24),
         ra=hms_to_deg(18, 18, 48),
         dec=dms_to_deg(-13, 48, 24),
         lon=dms_to_deg(10, 53, 22),
         lat=dms_to_deg(49, 53, 6)),
 
-    Configuration(
+    "config2": Configuration(
         time=normal_time_to_utc(2021, 1, 7, 0, 0, 0),
         ra=hms_to_deg(2, 31, 49.09),
         dec=dms_to_deg(89, 15, 50.8),
         lon=dms_to_deg(10, 53, 22),
         lat=dms_to_deg(49, 53, 6)),
 
-    Configuration(
+    "config3": Configuration(
         time=normal_time_to_utc(2020, 12, 23, 7, 34, 34.5),
         ra=hms_to_deg(13, 37, 0.919),
         dec=dms_to_deg(-29, 51, 56.74),
         lon=dms_to_deg(10, 53, 22),
         lat=dms_to_deg(49, 53, 6)),
 
-]
+}
 
-configurations = [
-    Configuration(
-        time=normal_time_to_utc(2020, 12, 23, 7, 34, 34.5),
-        ra=hms_to_deg(13, 37, 0.919),
-        dec=dms_to_deg(-29, 51, 56.74),
-        lon=dms_to_deg(10, 53, 22),
-        lat=dms_to_deg(49, 53, 6)),
-
-    Configuration(
+configurations = {
+    "config1": Configuration(
         time=normal_time_to_utc(2021, 2, 7, 22, 23, 24),
         ra=hms_to_deg(18, 18, 48),
         dec=dms_to_deg(-13, 48, 24),
         lon=dms_to_deg(10, 53, 22),
         lat=dms_to_deg(49, 53, 6)),
-
-    Configuration(
-        time=normal_time_to_utc(2021, 1, 7, 0, 0, 0),
-        ra=hms_to_deg(2, 31, 49.09),
-        dec=dms_to_deg(89, 15, 50.8),
-        lon=dms_to_deg(10, 53, 22),
-        lat=dms_to_deg(49, 53, 6)),
-
-]
+}
 
 
 # I/O functions
-def plot_config(config: Configuration, length: float, step_size: float):
+def plot_config(config: Configuration, length: float, step_size: float) -> list:
     assert step_size > 0
     time: float = config.time.jd
-    time_end: float = time + length/24
+    time_end: float = time + length / 24
     ra: float = config.ra
     dec: float = config.dec
     lon: float = config.lon
     lat: float = config.lat
     values: list = []
     while time < time_end:
-        time += step_size/24
         [era, az, el] = compute_azimuth_elevation(time, ra, dec, lon, lat)
         values.append((time, era, az, el))
+        time += step_size / 24
     return values
 
 
@@ -338,7 +324,7 @@ def print_plot(values: list):
         print_solution(era, az, el)
 
 
-def show_plot(values: list, draw_lines=False):
+def show_plot(values: list, config_name: str, draw_lines=False):
     plt.style.use("_mpl-gallery")
     fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
     angles = []
@@ -352,37 +338,60 @@ def show_plot(values: list, draw_lines=False):
         angles.append(angle)
         radii.append(radius)
         colors.append(color)
+
+    times = np.linspace(0, 10, len(angles))
+
     if draw_lines:
         ax.plot(angles, radii)
     else:
-        ax.scatter(angles, radii)
+        ax.scatter(angles, radii, c=times, cmap='viridis')
+    time_start: Time = Time(values[0][0], format="jd")
+    time_start.format = "iso"
+    time_end: Time = Time(values[-1][0], format="jd")
+    time_end.format = "iso"
     ax.set_rticks([45, 90, 135, 180])
     ax.grid(True)
+    plt.text(-0.30, 0.10,
+             f"Plotting {config_name}\nfrom: {time_start}\nto:   {time_end}",
+             transform=plt.gca().transAxes, fontsize=12,
+             verticalalignment='bottom', horizontalalignment='left')
     plt.show()
 
 
 def plot_input(input_string: str):
-    input_array = input_string.split(" ")
+    input_array = input_string.split("\"")
+    config_name = None
+    if len(input_array) == 3:
+        config_name = input_array[1]
+        input_string = " ".join([input_array[0],"name", input_array[2]])
+
+    input_array = input_string.split()
+
     name: str = input_array[0]
     is_verbose = "-v" in input_array
     draw_lines: bool = "-l" in input_array
     if len(input_array) < 3:
-        print("Usage: "+usage[name])
-        return
-    try:
-        num = int(input_array[1]) - 1
-        end = float(input_array[2])
-        step_size = float(input_array[3]) if len(input_array) > 3 + is_verbose + draw_lines else 1
-    except ValueError:
-        print("Usage: "+usage[name])
-        return
-    if 0 > num > len(configurations):
+        print("not enough arguments")
         print("Usage: " + usage[name])
         return
-    values = plot_config(configurations[num], end, step_size)
+    if config_name is None:
+        config_name = input_array[1]
+    try:
+        end = float(input_array[2])
+        step_size = float(input_array[3]) if \
+            (len(input_array) > 3 + is_verbose + draw_lines) else 1
+    except ValueError:
+        print("Invalid value for end or step_size given")
+        print("Usage: " + usage[name])
+        return
+    if config_name not in configurations:
+        print(f"{config_name} is not a saved configuration")
+        return
+    print(f"step {step_size}, config name: {config_name}, end: {end}")
+    values = plot_config(configurations[config_name], end, step_size)
     if is_verbose:
         print_plot(values)
-    show_plot(values, draw_lines)
+    show_plot(values, config_name, draw_lines)
 
 
 def save_to_file():
@@ -396,49 +405,66 @@ def load_from_file():
         configurations = pickle.load(inp)
 
 
-def add_config():
+def add_config(name=None):
     ex = Configuration(
         time=get_time(),
         ra=get_ra(),
         dec=get_dec(),
         lon=get_lon(),
         lat=get_lat())
-    configurations.append(ex)
+    count = 1
+    if name is None:
+        name = f"config{count}"
+        while name in configurations:
+            count += 1
+            name = f"config{count}"
+
+    if name in configurations:
+        return None
+
+    configurations.update({name: ex})
+    return name
 
 
-def add_config_input(input_string: None):
-    add_config()
-    print("Saved as Configuration {}".format(len(configurations)))
+def add_config_input(input_string: str):
+    input_array = input_string.split()
+    if len(input_array) > 1:
+        config_name = " ".join(input_string.split()[1:])
+        name = add_config(config_name)
+    else:
+        name = add_config()
+
+    if name is not None:
+        print("Saved as Configuration \"{}\"".format(name))
+    else:
+        print("There is already a configuration named \"{}\"".format(input_array[1]))
 
 
-def remove_config(num: int):
-    configurations.pop(num)
+def remove_config(config: str):
+    configurations.pop(config)
 
 
 def remove_config_input(input_string: str):
     """removes a configuration from the array"""
-    num = input_string.split()[1] if len(input_string.split()) > 1 else None
-    if num is None:
-        num = input("Which configuration? ")
-    try:
-        num = int(num) - 1
-    except ValueError:
-        print("Please specify a configuration between 1 and {}".format(len(configurations)))
-        return
-    if len(configurations) > num >= 0:
-        confirmation = input("Are you sure you want to delete configuration {}? (y/n)".format(num+1))
-        if confirmation == "Y" or confirmation == "y":
-            remove_config(num)
+    config_name = " ".join(input_string.split()[1:]) if len(input_string.split()) > 1 else None
+    if config_name is None:
+        config_name = input("Which configuration? ")
+
+    if config_name in configurations:
+        confirmation: str = input("Are you sure you want to delete configuration {}? (y/n) ".
+                                  format(config_name))
+        if confirmation.lower() == "y":
+            remove_config(config_name)
         else:
             return
     else:
-        print("Please specify a configuration between 1 and {}".format(len(configurations)))
+        print("Please specify an existing configuration name")
         return
     print("Successfully removed the specified configuration")
 
 
-def load(num: int):
-    ex = configurations[num]
+def load(config_name: str):
+    ex = configurations[config_name]
     set_time_utc(new_time=ex.time)
     set_ra(ex.ra, single_value=True)
     set_dec(ex.dec, single_value=True)
@@ -448,24 +474,22 @@ def load(num: int):
 
 def load_input(input_string: str):
     """loads a configuration to be the currently used value"""
-    num = input_string.split()[1] if len(input_string.split()) > 1 else None
-    if num is None:
-        num = input("Which configuration? ")
-    try:
-        num = int(num) - 1
-    except ValueError:
-        print("Please specify a configuration between 1 and {}".format(len(configurations)))
-        return
-    if len(configurations) > num >= 0:
-        load(num)
+    config_name = " ".join(input_string.split()[1:]) if len(input_string.split()) > 1 else None
+    if config_name is None:
+        config_name = input("Which configuration? ")
+
+    if config_name in configurations:
+        load(config_name)
     else:
-        print("Please specify a configuration between 1 and {}".format(len(configurations)))
+        print("Please specify an existing configuration name")
         return
+    print(config_name)
     list_values()
 
 
 def print_solution(era, az, el):
-    print("Era: {:.4f}\nAzimuth: {}\nElevation: {}".format(era, deg_to_dms(az), deg_to_dms(el)))
+    print("Era: {:.4f}\nAzimuth: {}\nElevation: {}".format(
+        era, deg_to_dms(az), deg_to_dms(el)))
 
 
 def change_value_input(input_string: str):
@@ -560,9 +584,9 @@ def list_values_input(input_string: None):
 
 
 def list_configurations():
-    for (i, ex) in enumerate(configurations):
-        print("Configuration {}:".format(i+1))
-        print(textwrap.indent(str(ex), "    "))
+    for (name, config) in configurations.items():
+        print("Configuration {}:".format(name))
+        print(textwrap.indent(str(config), "    "))
 
 
 def list_configurations_input(input_string):
@@ -581,7 +605,7 @@ def execute() -> list:
 
 def execute_input(input_string: str):
     if len(input_string.split()) > 1:
-        exec_configuration_input(input_string.split()[1])
+        exec_configuration_input(" ".join(input_string.split()[1:]))
         return
     [era, az, el] = execute()
     print_solution(era, az, el)
@@ -600,8 +624,8 @@ def change_output_mode_input(input_string):
     print(output)
 
 
-def exec_configuration(num: int) -> list:
-    ex = configurations[num]
+def exec_configuration(config_name: str) -> list:
+    ex = configurations[config_name]
     time_jd = ex.time.jd
     ra_deg = ex.ra
     dec_deg = ex.dec
@@ -611,20 +635,16 @@ def exec_configuration(num: int) -> list:
     return [era, az, el]
 
 
-def exec_configuration_input(num):
-    """prints the configuration specified by the integer num"""
-    if num is None:
-        num = input("Which configuration? ")
-    try:
-        num = int(num) - 1
-    except ValueError:
-        print("Please specify an configuration between 1 and {}".format(len(configurations)))
-        return
-    if len(configurations) > num >= 0:
-        [era, az, el] = exec_configuration(num)
+def exec_configuration_input(config_name):
+    """prints the configuration specified by the string config_name"""
+    if config_name is None:
+        config_name = input("Which configuration? ")
+
+    if config_name in configurations:
+        [era, az, el] = exec_configuration(config_name)
         print_solution(era, az, el)
     else:
-        print("Please specify an configuration between 1 and {}".format(len(configurations)))
+        print("Please specify an existing configuration")
 
 
 def print_help_input(input_string):
@@ -632,7 +652,7 @@ def print_help_input(input_string):
     for [command, description] in available_commands.items():
         print(command + ":")
         usage_str = "Usage: " + usage[command]
-        print(textwrap.indent(usage_str , "       "))
+        print(textwrap.indent(usage_str, "       "))
         print(textwrap.indent(description, "    "))
 
 
@@ -666,7 +686,8 @@ available_commands = {
     "lse": "List all the saved configurations",
     "rm": "Remove the selected configuration",
     "co": "Toggles output mode between degrees and degree:arc-minute:arc-second",
-    "plot": "Plots the values of the selected configuration for [length] hours with step size [time_step]"
+    "plot": "Plots the values of the selected configuration for [length] hours with"
+            " step size [time_step]"
             "\n  -v: All the calculated values will be printed to the console"
             "\n  -l: Draw lines between the calculated values"
 }
@@ -679,14 +700,14 @@ usage = {
     "clat": "clat [degrees] [arc-minutes] [arc-seconds]",
     "rloc": "rloc",
     "rtime": "rtime",
-    "ex": "ex [config:int]",
+    "ex": "ex [config_name:str]",
     "ls": "ls",
-    "save": "save config:int",
-    "load": "load config:int",
+    "save": "save config_name:str",
+    "load": "load config_name:str",
     "lse": "lse",
-    "rm": "rm config:int",
+    "rm": "rm config_name:str",
     "co": "co",
-    "plot": "plot config:int length:float [time_step: float] [-v] [-d]"
+    "plot": "plot config_name:str length:float [time_step: float] [-v] [-d]"
 }
 
 executable_commands = {
@@ -726,11 +747,11 @@ def input_loop():
 output_degrees = False
 use_current_time = True
 current_config = Configuration(
-        time=normal_time_to_utc(2021, 1, 7, 0, 0, 0),
-        ra=hms_to_deg(2, 31, 49.09),
-        dec=dms_to_deg(89, 15, 50.8),
-        lon=dms_to_deg(10, 53, 22),
-        lat=dms_to_deg(49, 53, 6))
+    time=normal_time_to_utc(2021, 1, 7, 0, 0, 0),
+    ra=hms_to_deg(2, 31, 49.09),
+    dec=dms_to_deg(89, 15, 50.8),
+    lon=dms_to_deg(10, 53, 22),
+    lat=dms_to_deg(49, 53, 6))
 
 
 def main():
