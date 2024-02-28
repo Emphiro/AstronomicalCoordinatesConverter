@@ -11,13 +11,14 @@ from astropy.time import Time
 
 # constants
 
-TIME_2000 = 2451545.0
-PI2 = 2 * math.pi
-DEBUG_MODE = False
+TIME_2000: float = 2451545.0
+PI2: float = 2 * math.pi
+DEBUG_MODE: bool = False
 
 # date conversions
 
-def normal_time_to_utc(year, month, day, hour, minutes, sec):
+
+def normal_time_to_utc(year: int, month: int, day: int, hour: int, minutes: int, sec: float) -> Time:
     """convert time in year-month-day hour:minutes:seconds format to Time object"""
     return Time("{}-{}-{}T{}:{}:{}".format(year, month, day, hour, minutes, sec),
                 format="isot", scale="utc")
@@ -25,35 +26,35 @@ def normal_time_to_utc(year, month, day, hour, minutes, sec):
 
 # angle conversions
 
-def dms_to_deg(deg, minute, sec):
+def dms_to_deg(deg: int, minute: int, sec: float) -> float:
     """convert degrees, arcminutes and arcseconds to degrees"""
     sign = -1 if deg < 0 else 1
     deg = abs(deg)
     return sign * deg + sign * minute / 60 + sign * sec / (60 ** 2)
 
 
-def hms_to_deg(hour, minute, sec):
+def hms_to_deg(hour: int, minute: int, sec: float) -> float:
     """convert hours, minutes and seconds to degrees"""
     sign = -1 if hour < 0 else 1
     hour = abs(hour)
     return ((sign * hour + sign * minute / 60 + sign * sec / (60 ** 2)) / 24) * 360
 
 
-def angle_to_gmst(theta):
+def angle_to_gmst(theta: float) -> float:
     return 86400 * (theta / PI2)
 
 
-def deg_to_rad(degrees):
+def deg_to_rad(degrees: float) -> float:
     """convert degrees to radians"""
     return (degrees / 360) * PI2
 
 
-def rad_to_deg(rad):
+def rad_to_deg(rad: float) -> float:
     """convert radians to degrees"""
     return (rad / PI2) * 360
 
 
-def deg_to_dms(degrees):
+def deg_to_dms(degrees: float) -> str:
     """convert degrees to degrees, arcminutes and arcseconds if output_degrees = False"""
     if output_degrees:
         return "{:.4f}".format(degrees)
@@ -73,7 +74,7 @@ def deg_to_dms(degrees):
     return "{}d {}m {:.2f}s".format(sign * degs, mins, secs)
 
 
-def deg_to_hms(degrees):
+def deg_to_hms(degrees: float) -> str:
     """convert degrees to hours, minutes and seconds if output_degrees = False"""
     if output_degrees:
         return "{:.4f}".format(degrees)
@@ -96,7 +97,7 @@ def deg_to_hms(degrees):
 
 # Getter and Setter functions
 
-def get_time():
+def get_time() -> Time:
     """Return an astropy time object"""
     if use_current_time:
         return Time(datetime.now())
@@ -104,14 +105,14 @@ def get_time():
         return current_config.time
 
 
-def get_time_jd():
+def get_time_jd() -> float:
     """Return the time in julian days"""
     if use_current_time:
         return Time(datetime.now()).jd
     return current_config.time.jd
 
 
-def set_time(*new_time, single_value=False):
+def set_time(*new_time: [int, int, int, int, int, float], single_value=False) -> Time:
     """new_time as *[year, month, day, hour, minute, second]"""
     if single_value:
         set_time_utc(new_time[0])
@@ -123,7 +124,7 @@ def set_time(*new_time, single_value=False):
     return current_config.time
 
 
-def set_time_utc(new_time):
+def set_time_utc(new_time: Time):
     """new_time as Time object"""
     global use_current_time
     use_current_time = False
@@ -131,7 +132,7 @@ def set_time_utc(new_time):
     current_config.time = new_time
 
 
-def set_ra(*new_ra, single_value=False):
+def set_ra(*new_ra: [float, float, float], single_value=False) -> str:
     """new_ra as *[hours, minutes, seconds]"""
     global current_config
     if single_value:
@@ -141,11 +142,11 @@ def set_ra(*new_ra, single_value=False):
     return deg_to_hms(current_config.ra)
 
 
-def get_ra():
+def get_ra() -> float:
     return current_config.ra
 
 
-def set_dec(*new_dec, single_value=False):
+def set_dec(*new_dec: [float, float, float], single_value=False) -> str:
     """new_dec as *[degrees, arcminutes, arcseconds]"""
     global current_config
     if single_value:
@@ -155,11 +156,11 @@ def set_dec(*new_dec, single_value=False):
     return deg_to_dms(current_config.dec)
 
 
-def get_dec():
+def get_dec() -> float:
     return current_config.dec
 
 
-def set_lon(*new_lon, single_value=False):
+def set_lon(*new_lon: [float, float, float], single_value=False) -> str:
     """new_lon as *[degrees, arcminutes, arcseconds]"""
     global current_config
     if single_value:
@@ -173,7 +174,7 @@ def get_lon():
     return current_config.lon
 
 
-def set_lat(*new_lat, single_value=False):
+def set_lat(*new_lat: [float, float, float], single_value=False) -> str:
     """new_lat as *[degrees, arcminutes, arcseconds]"""
     global current_config
     if single_value:
@@ -183,25 +184,25 @@ def set_lat(*new_lat, single_value=False):
     return deg_to_dms(current_config.lat)
 
 
-def get_lat():
+def get_lat() -> float:
     return current_config.lat
 
 
 # Actual computation
 
-def angle_to_coords(ra, dec):
+def angle_to_coords(ra: float, dec: float) -> [float, float, float]:
     """convert spherical coordinates to cartesian coordinates"""
     return np.array([math.cos(ra) * math.cos(dec), math.sin(ra) * math.cos(dec), math.sin(dec)])
 
 
-def earth_rot_angle(time_jd):
+def earth_rot_angle(time_jd: float) -> float:
     """compute earth rotation angle (ERA) from time in julian days"""
     du = time_jd - TIME_2000
     angle = PI2 * (0.7790572732640 + 1.00273781191135448 * du)
     return angle
 
 
-def compute_rz(theta):
+def compute_rz(theta: float):
     """compute rotation matrix around z-axis using theta in radians"""
     cos = math.cos(theta)
     sin = math.sin(theta)
@@ -213,7 +214,7 @@ def compute_rx():
     return np.array([[-1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
 
-def compute_ry(phi):
+def compute_ry(phi: float):
     """compute rotation matrix around y-axis using latitude in radians"""
     phi = (math.pi / 2) - phi % PI2
     cos = math.cos(phi)
@@ -221,38 +222,38 @@ def compute_ry(phi):
     return np.array([[cos, 0, -sin], [0, 1, 0], [sin, 0, cos]])
 
 
-def compute_azimuth_elevation(time_jd, ra_deg, dec_deg, lon_deg, lat_deg):
+def compute_azimuth_elevation(time_jd: float, ra_deg: float, dec_deg: float, lon_deg: float, lat_deg: float) -> [float, float, float]:
     """compute era, azimuth and elevation from time in julian days and
     right ascension, declination, longitude and latitude in degrees"""
-    ra = deg_to_rad(ra_deg) % PI2
-    dec = deg_to_rad(dec_deg) % PI2
-    lat = deg_to_rad(lat_deg) % PI2
-    lon = deg_to_rad(lon_deg) % PI2
-    theta = earth_rot_angle(time_jd)
-    era = rad_to_deg(theta % PI2)
-    theta = (theta + lon) % PI2
+    ra: float = deg_to_rad(ra_deg) % PI2
+    dec: float = deg_to_rad(dec_deg) % PI2
+    lat: float = deg_to_rad(lat_deg) % PI2
+    lon: float = deg_to_rad(lon_deg) % PI2
+    theta: float = earth_rot_angle(time_jd)
+    era: float = rad_to_deg(theta % PI2)
+    theta: float = (theta + lon) % PI2
     [x, y, z] = compute_rx() @ compute_ry(lat) @ compute_rz(theta) @ angle_to_coords(ra, dec)
 
-    el = math.acos(z)
+    el: float = math.acos(z)
     el = math.pi / 2 - el
-    az = math.atan(y / x)
+    az: float = math.atan(y / x)
     if x < 0:
         az = az + math.pi
     elif x > 0 > y:
         az = az + PI2
 
-    az_dms = deg_to_dms(rad_to_deg(az))
-    el_dms = deg_to_dms(rad_to_deg(el))
+    az_dms: str = deg_to_dms(rad_to_deg(az))
+    el_dms: str = deg_to_dms(rad_to_deg(el))
     return [era, az_dms, el_dms]
 
 
 class Configuration:
     def __init__(self, time, ra, dec, lon, lat):
-        self.time = time
-        self.ra = ra
-        self.dec = dec
-        self.lon = lon
-        self.lat = lat
+        self.time: Time = time
+        self.ra: float = ra
+        self.dec: float = dec
+        self.lon: float = lon
+        self.lat: float = lat
 
     def __str__(self):
         return (f"Time: {self.time}\nRight Ascension: {deg_to_hms(self.ra)}\n"
@@ -566,7 +567,6 @@ executable_commands = {
     "lse": list_configurations,
     "rm": remove_config,
     "co": change_output_mode,
-    #"test": 1
 }
 
 
