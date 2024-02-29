@@ -329,7 +329,6 @@ def show_polar_plot(values: list, config_name: str, draw_lines=False):
     angles = []
     radii = []
     colors = []
-    i = range(0, len(values))
     for (i, (time, era, az, el)) in enumerate(values):
         radius: float = 90 - el
         angle: float = deg_to_rad(az)
@@ -364,13 +363,13 @@ def show_simple_plot(values: list, config_name: str):
     t = []
     y1 = []
     y2 = []
-    for(time, era, az, el) in values:
+    for (time, era, az, el) in values:
         t.append((time*24) % 24)
         y1.append(az)
         y2.append(el)
     ax.scatter(t, y1, label="Azimuth", color="lime")
     ax.scatter(t, y2, label="Elevation", color="royalblue")
-    ax.set(xlabel='time (h)', ylabel='Azimuth and Elevation (degrees)',
+    ax.set(xlabel='time [hours]', ylabel='Azimuth and Elevation [degrees]',
            title='Azimuth and Elevation plotted against time')
     plt.subplots_adjust(left=0.05, bottom=0.05, top=0.925)
     time_start: Time = Time(values[0][0], format="jd")
@@ -394,13 +393,14 @@ def plot_input(input_string: str):
     config_name = None
     if len(input_array) == 3:
         config_name = input_array[1]
-        input_string = " ".join([input_array[0],"name", input_array[2]])
+        input_string = " ".join([input_array[0], "name", input_array[2]])
 
     input_array = input_string.split()
 
     name: str = input_array[0]
     is_verbose = "-v" in input_array
-    is_simple = "-s" in input_array
+    is_polar = "-p" in input_array
+    save_plot = "-s" in input_array
     draw_lines: bool = "-l" in input_array
     if len(input_array) < 2:
         print("not enough arguments")
@@ -409,7 +409,7 @@ def plot_input(input_string: str):
     if config_name is None:
         config_name = input_array[1]
     try:
-        adjusted_len = len(input_array) - is_verbose - draw_lines - is_simple
+        adjusted_len = len(input_array) - is_verbose - draw_lines - is_polar - save_plot
         end = float(input_array[2]) if adjusted_len > 2 else 24
         if adjusted_len < 3:
             step_size = 1
@@ -428,10 +428,10 @@ def plot_input(input_string: str):
     values = plot_config(configurations[config_name], end, step_size)
     if is_verbose:
         print_plot(values)
-    if is_simple:
-        show_simple_plot(values, config_name)
-    else:
+    if is_polar:
         show_polar_plot(values, config_name, draw_lines)
+    else:
+        show_simple_plot(values, config_name)
 
 
 def save_to_file():
@@ -527,7 +527,7 @@ def load_input(input_string: str):
     list_values()
 
 
-def print_solution(era, az, el):
+def print_solution(era: float, az: float, el: float):
     print("Era: {:.4f}\nAzimuth: {}\nElevation: {}".format(
         era, deg_to_dms(az), deg_to_dms(el)))
 
@@ -629,7 +629,7 @@ def list_configurations():
         print(textwrap.indent(str(config), "    "))
 
 
-def list_configurations_input(input_string):
+def list_configurations_input(input_string: None):
     list_configurations()
 
 
@@ -657,7 +657,7 @@ def change_output_mode() -> bool:
     return output_degrees
 
 
-def change_output_mode_input(input_string):
+def change_output_mode_input(input_string: None):
     change_output_mode()
     output = "Output will be given in degrees" if output_degrees else \
         "Output will be given in degrees arc-minutes and arc-seconds"
@@ -675,7 +675,7 @@ def exec_configuration(config_name: str) -> list:
     return [era, az, el]
 
 
-def exec_configuration_input(config_name):
+def exec_configuration_input(config_name: str):
     """prints the configuration specified by the string config_name"""
     if config_name is None:
         config_name = input("Which configuration? ")
@@ -687,7 +687,7 @@ def exec_configuration_input(config_name):
         print("Please specify an existing configuration")
 
 
-def print_help_input(input_string):
+def print_help_input(input_string: None):
     print("Available commands:")
     for [command, description] in available_commands.items():
         print(command + ":")
@@ -707,7 +707,7 @@ def init_values():
     set_lat(49, 53, 6)
 
 
-def not_available_input(input_string):
+def not_available_input(input_string: None):
     print("Someone has not yet implemented this function :(")
 
 
@@ -728,7 +728,8 @@ available_commands = {
     "co": "Toggles output mode between degrees and degree:arc-minute:arc-second",
     "plot": "Plots the values of the selected configuration for [length] hours with"
             " step size [time_step]"
-            "\n  -s: Draw a simple plot instead of the polar plot"
+            "\n  -s: Save the plot as png"
+            "\n  -p: Draw a polar plot instead of the normal plot"
             "\n  -v: All the calculated values will be printed to the console"
             "\n  -l: Draw lines between the calculated values"
 }
@@ -748,7 +749,7 @@ usage = {
     "lse": "lse",
     "rm": "rm config_name:str",
     "co": "co",
-    "plot": "plot config_name:str [length:float] [time_step: float] [-s] [-v] [-d]"
+    "plot": "plot config_name:str [length:float] [time_step: float] [-s] [-p] [-v] [-d]"
 }
 
 executable_commands = {
