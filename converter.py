@@ -55,10 +55,7 @@ def rad_to_deg(rad: float) -> float:
     return (rad / PI2) * 360
 
 
-def deg_to_dms(degrees: float) -> str:
-    """convert degrees to degrees, arcminutes and arcseconds if output_degrees = False"""
-    if output_degrees:
-        return "{:.4f}°".format(degrees)
+def convert_degrees(degrees: float) -> list:
     sign = -1 if degrees < 0 else 1
     degrees = abs(degrees)
     degs = math.floor(degrees)
@@ -72,6 +69,14 @@ def deg_to_dms(degrees: float) -> str:
     if mins == 60:
         mins = 0
         degrees += 1
+    return [sign, degs, mins, secs]
+
+
+def deg_to_dms(degrees: float) -> str:
+    """convert degrees to degrees, arcminutes and arcseconds if output_degrees = False"""
+    if output_degrees:
+        return "{:.4f}°".format(degrees)
+    [sign, degs, mins, secs] = convert_degrees(degrees)
     return "{}° {}' {:.2f}\"".format(sign * degs, mins, secs)
 
 
@@ -79,20 +84,7 @@ def deg_to_hms(degrees: float) -> str:
     """convert degrees to hours, minutes and seconds if output_degrees = False"""
     if output_degrees:
         return "{:.4f}°".format(degrees)
-    sign = -1 if degrees < 0 else 1
-    degrees = abs(degrees)
-    degrees = (degrees / 360) * 24
-    degs = math.floor(degrees)
-    mins = math.floor((degrees - degs) * 60)
-    secs = (((degrees - degs) * 60) - mins) * 60
-    # edge case: secs = 60.00
-    if round(secs, 2) == 60.00:
-        secs = 0
-        mins += 1
-    # edge case: mins = 60
-    if mins == 60:
-        mins = 0
-        degrees += 1
+    [sign, degs, mins, secs] = convert_degrees(degrees)
     return "{}h {}m {:.2f}s".format(sign * degs, mins, secs)
 
 
@@ -284,6 +276,13 @@ examples_old = {
         time=normal_time_to_utc(2020, 12, 23, 7, 34, 34.5),
         ra=hms_to_deg(13, 37, 0.919),
         dec=dms_to_deg(-29, 51, 56.74),
+        lon=dms_to_deg(10, 53, 22),
+        lat=dms_to_deg(49, 53, 6)),
+
+    "m38": Configuration(
+        time=normal_time_to_utc(2024, 3, 13, 0, 0, 0),
+        ra=hms_to_deg(5, 28, 42.5),
+        dec=dms_to_deg(35, 51, 18),
         lon=dms_to_deg(10, 53, 22),
         lat=dms_to_deg(49, 53, 6)),
 
