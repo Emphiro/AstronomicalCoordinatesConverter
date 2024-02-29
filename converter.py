@@ -324,7 +324,7 @@ def print_plot(values: list):
         print_solution(era, az, el)
 
 
-def show_plot(values: list, config_name: str, draw_lines=False):
+def show_polar_plot(values: list, config_name: str, draw_lines=False):
     plt.style.use("_mpl-gallery")
     fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
     angles = []
@@ -355,6 +355,38 @@ def show_plot(values: list, config_name: str, draw_lines=False):
              f"Plotting {config_name}\nfrom: {time_start}\nto:   {time_end}",
              transform=plt.gca().transAxes, fontsize=12,
              verticalalignment='bottom', horizontalalignment='left')
+    plt.subplots_adjust(left=0.05, bottom=0.05, top=0.95)
+    plt.show()
+
+
+def show_simple_plot(values: list, config_name: str):
+    plt.style.use("_mpl-gallery")
+    fig, ax = plt.subplots()
+    t = []
+    y1 = []
+    y2 = []
+    for(time, era, az, el) in values:
+        t.append((time*24) % 24)
+        y1.append(az)
+        y2.append(el)
+    ax.scatter(t, y1, label="Azimuth", color="lime")
+    ax.scatter(t, y2, label="Elevation", color="royalblue")
+    ax.set(xlabel='time (h)', ylabel='Azimuth and Elevation (degrees)',
+           title='Azimuth and Elevation plotted against time')
+    plt.subplots_adjust(left=0.05, bottom=0.05, top=0.925)
+    time_start: Time = Time(values[0][0], format="jd")
+    time_start.format = "iso"
+    time_end: Time = Time(values[-1][0], format="jd")
+    time_end.format = "iso"
+    ax.set_title(f"Plotting {config_name}\nfrom: {time_start}\nto:   {time_end}")
+    ax.grid(True)
+    ax.set_yticks([-90, -45, 0, 45, 90, 135, 180, 225, 270, 315, 360])
+    ax.axhline(y=360, color="lime")
+    ax.axhline(y=-90, color="royalblue")
+    ax.axhline(y=0, color="lime")
+    ax.axhline(y=90, color="royalblue")
+    ax.set_xticks([0, 6, 12, 28, 24])
+    ax.legend()
     plt.show()
 
 
@@ -369,17 +401,23 @@ def plot_input(input_string: str):
 
     name: str = input_array[0]
     is_verbose = "-v" in input_array
+    is_simple = "-s" in input_array
     draw_lines: bool = "-l" in input_array
-    if len(input_array) < 3:
+    if len(input_array) < 2:
         print("not enough arguments")
         print("Usage: " + usage[name])
         return
     if config_name is None:
         config_name = input_array[1]
     try:
-        end = float(input_array[2])
-        step_size = float(input_array[3]) if \
-            (len(input_array) > 3 + is_verbose + draw_lines) else 1
+        adjusted_len = len(input_array) - is_verbose - draw_lines - is_simple
+        end = float(input_array[2]) if adjusted_len > 2 else 24
+        if adjusted_len < 3:
+            step_size = 1
+        elif adjusted_len < 4:
+            step_size = float(input_array[2])
+        else:
+            step_size = float(input_array[3])
     except ValueError:
         print("Invalid value for end or step_size given")
         print("Usage: " + usage[name])
@@ -387,11 +425,14 @@ def plot_input(input_string: str):
     if config_name not in configurations:
         print(f"{config_name} is not a saved configuration")
         return
-    print(f"step {step_size}, config name: {config_name}, end: {end}")
+    print(f"step_size {step_size}, config name: {config_name}, end: {end}")
     values = plot_config(configurations[config_name], end, step_size)
     if is_verbose:
         print_plot(values)
-    show_plot(values, config_name, draw_lines)
+    if is_simple:
+        show_simple_plot(values, config_name)
+    else:
+        show_polar_plot(values, config_name, draw_lines)
 
 
 def save_to_file():
@@ -688,6 +729,7 @@ available_commands = {
     "co": "Toggles output mode between degrees and degree:arc-minute:arc-second",
     "plot": "Plots the values of the selected configuration for [length] hours with"
             " step size [time_step]"
+            "\n  -s: Draw a simple plot instead of the polar plot"
             "\n  -v: All the calculated values will be printed to the console"
             "\n  -l: Draw lines between the calculated values"
 }
@@ -707,7 +749,7 @@ usage = {
     "lse": "lse",
     "rm": "rm config_name:str",
     "co": "co",
-    "plot": "plot config_name:str length:float [time_step: float] [-v] [-d]"
+    "plot": "plot config_name:str [length:float] [time_step: float] [-s] [-v] [-d]"
 }
 
 executable_commands = {
