@@ -8,6 +8,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.time import Time
+import simbad_inteface as si
 
 # constants
 
@@ -25,7 +26,11 @@ def normal_time_to_utc(year: int, month: int, day: int, hour: int, minutes: int,
                 format="isot", scale="utc")
 
 
+def hours_from_julian_days(time: float) -> float:
+    return ((time * 24) - 12) % 24
+
 # angle conversions
+
 
 def dms_to_deg(deg: int, minute: int, sec: float) -> float:
     """convert degrees, arcminutes and arcseconds to degrees"""
@@ -82,6 +87,7 @@ def deg_to_dms(degrees: float) -> str:
 
 def deg_to_hms(degrees: float) -> str:
     """convert degrees to hours, minutes and seconds if output_degrees = False"""
+    degrees = (degrees / 360) * 24
     if output_degrees:
         return "{:.4f}°".format(degrees)
     [sign, degs, mins, secs] = convert_degrees(degrees)
@@ -279,10 +285,17 @@ examples_old = {
         lon=dms_to_deg(10, 53, 22),
         lat=dms_to_deg(49, 53, 6)),
 
-    "m38": Configuration(
+    "m57": Configuration(
         time=normal_time_to_utc(2024, 3, 13, 0, 0, 0),
-        ra=hms_to_deg(5, 28, 42.5),
-        dec=dms_to_deg(35, 51, 18),
+        ra=hms_to_deg(18, 53, 35.097),
+        dec=dms_to_deg(33, 1, 44.88),
+        lon=dms_to_deg(10, 53, 22),
+        lat=dms_to_deg(49, 53, 6)),
+
+    "veil": Configuration(
+        time=normal_time_to_utc(2024, 3, 13, 0, 0, 0),
+        ra=hms_to_deg(20, 45, 37.99),
+        dec=dms_to_deg(39, 42, 29.9),
         lon=dms_to_deg(10, 53, 22),
         lat=dms_to_deg(49, 53, 6)),
 
@@ -298,7 +311,51 @@ configurations = {
 }
 
 
+def get_viable_objects(start_time=19, end_time=6, cutoff=2, show_all=True) -> list:
+    cur_time: Time = normal_time_to_utc(2024, 3, 13, 0, 0, 0)
+    cur_lon: float = dms_to_deg(10, 53, 22)
+    cur_lat: float = dms_to_deg(49, 53, 6)
+    objects: list = si.get_objects()
+    # Stars are roughly visible from 19:00 to 6:00
+    result = []
+    for (name, ra, dec) in objects:
+        ra_deg = hms_to_deg(*ra)
+        dec_deg = dms_to_deg(*dec)
+        config = Configuration(time=cur_time, ra=ra_deg, dec=dec_deg, lon=cur_lon, lat=cur_lat)
+        values = plot_config(config, 24, 0.1)
+        max_el = -90
+        count_over_30 = 0
+        for (time_jd, era, az, el) in values:
+            max_el = max(el, max_el)
+            hour = hours_from_julian_days(time_jd)
+            count_over_30 += el > 30 and (hour > start_time or hour < end_time)
+        if count_over_30 > len(values) * (cutoff/24) or show_all:
+            result.append((name, config))
+            
+    return result
+
+
 # I/O functions
+
+def parse_y_n(input_string: str) -> bool:
+    """return True if the input is y or Y else false"""
+    return input_string.lower() == "y"
+
+
+def input_get_viable_objects(input_string: None):
+    print("Fetching data. This may take some time...")
+    objects = get_viable_objects()
+    for (name, config) in objects:
+        print(f"Name: {name}")
+        user_input: str = input("Show plot (y/n) ")
+        show_plot: bool = parse_y_n(user_input)
+        if show_plot:
+            print(f"ra: {config.ra} dec: {config.dec}")
+            values = plot_config(config, 24, 1)
+            print_plot(values)
+            show_simple_plot(values, name, detailed=True)
+        
+
 def plot_config(config: Configuration, length: float, step_size: float) -> list:
     assert step_size > 0
     time: float = config.time.jd
@@ -320,6 +377,7 @@ def print_plot(values: list):
         time_utc: Time = Time(time, format="jd")
         time_utc.format = "iso"
         print(f"{i} {time_utc}:")
+        print(f"{hours_from_julian_days(time)}")
         print_solution(era, az, el)
 
 
@@ -357,14 +415,14 @@ def show_polar_plot(values: list, config_name: str, draw_lines=False):
     plt.show()
 
 
-def show_simple_plot(values: list, config_name: str):
+def show_simple_plot(values: list, config_name: str, detailed=False):
     plt.style.use("_mpl-gallery")
     fig, ax = plt.subplots()
     t = []
     y1 = []
     y2 = []
     for (time, era, az, el) in values:
-        t.append((time*24) % 24)
+        t.append(hours_from_julian_days(time))
         y1.append(az)
         y2.append(el)
     ax.scatter(t, y1, label="Azimuth", color="lime")
@@ -379,11 +437,17 @@ def show_simple_plot(values: list, config_name: str):
     ax.set_title(f"Plotting {config_name}\nfrom: {time_start}\nto:   {time_end}")
     ax.grid(True)
     ax.set_yticks([-90, -45, 0, 45, 90, 135, 180, 225, 270, 315, 360])
-    ax.axhline(y=360, color="lime")
-    ax.axhline(y=-90, color="royalblue")
-    ax.axhline(y=0, color="lime")
-    ax.axhline(y=90, color="royalblue")
-    ax.set_xticks([0, 6, 12, 28, 24])
+    ax.axhline(y=360, color="lime", alpha=0.5)
+    ax.axhline(y=-90, color="royalblue", alpha=0.5)
+    if detailed:
+        ax.axhline(y=30, color="royalblue", alpha=0.3)
+        plt.plot([6, 6], [30, 90], color="royalblue", alpha=0.3)
+        plt.plot([19, 19], [30, 90], color="royalblue", alpha=0.3)
+    ax.axhline(y=0, color="lime", alpha=0.5)
+
+    ax.axhline(y=90, color="royalblue", alpha=0.5)
+    ax.set_xticks([0, 6, 12, 18, 24])
+    
     ax.legend()
     plt.show()
 
@@ -425,6 +489,7 @@ def plot_input(input_string: str):
         print(f"{config_name} is not a saved configuration")
         return
     print(f"step_size {step_size}, config name: {config_name}, end: {end}")
+    print(f"ra: {configurations[config_name].ra} dec: {configurations[config_name].dec}")
     values = plot_config(configurations[config_name], end, step_size)
     if is_verbose:
         print_plot(values)
@@ -493,7 +558,7 @@ def remove_config_input(input_string: str):
     if config_name in configurations:
         confirmation: str = input("Are you sure you want to delete configuration {}? (y/n) ".
                                   format(config_name))
-        if confirmation.lower() == "y":
+        if parse_y_n(confirmation):
             remove_config(config_name)
         else:
             return
@@ -731,7 +796,8 @@ available_commands = {
             "\n  -s: Save the plot as png"
             "\n  -p: Draw a polar plot instead of the normal plot"
             "\n  -v: All the calculated values will be printed to the console"
-            "\n  -l: Draw lines between the calculated values"
+            "\n  -l: Draw lines between the calculated values",
+    "av": "Gets all the viable objects for observation",
 }
 
 usage = {
@@ -749,7 +815,8 @@ usage = {
     "lse": "lse",
     "rm": "rm config_name:str",
     "co": "co",
-    "plot": "plot config_name:str [length:float] [time_step: float] [-s] [-p] [-v] [-d]"
+    "plot": "plot config_name:str [length:float] [time_step: float] [-s] [-p] [-v] [-d]",
+    "av": "av",
 }
 
 executable_commands = {
@@ -769,6 +836,7 @@ executable_commands = {
     "rm": remove_config_input,
     "co": change_output_mode_input,
     "plot": plot_input,
+    "av": input_get_viable_objects,
 }
 
 
