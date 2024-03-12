@@ -279,6 +279,18 @@ def input_get_viable_objects(input_string: None):
             plotting.show_simple_plot(values, name, detailed=True)
 
 
+def input_search_viable_objects(input_string: str):
+    object_name = input_string.split()[1]
+    print("Fetching data. This may take some time...")
+    objects = cm.search_database_object([object_name])
+    if objects is None:
+        print(f"No objects with name {object_name} found")
+    for (name, config) in objects:
+        values = cm.plot_config(config, 24, 1)
+        print_plot(values)
+        plotting.show_simple_plot(values, name, detailed=True)
+
+
 available_commands = {
     "ctime": "Change the time",
     "cra": "Change the right ascension",
@@ -296,11 +308,11 @@ available_commands = {
     "co": "Toggles output mode between degrees and degree:arc-minute:arc-second",
     "plot": "Plots the values of the selected configuration for [length] hours with"
             " step size [time_step]"
-            "\n  -s: Save the plot as png"
             "\n  -p: Draw a polar plot instead of the normal plot"
             "\n  -v: All the calculated values will be printed to the console"
             "\n  -l: Draw lines between the calculated values",
     "av": "Gets all the viable objects for observation",
+    "sr": "Search for object on the simbad database and plot the result",
 }
 
 usage = {
@@ -318,8 +330,9 @@ usage = {
     "lse": "lse",
     "rm": "rm config_name:str",
     "co": "co",
-    "plot": "plot config_name:str [length:float] [time_step: float] [-s] [-p] [-v] [-d]",
+    "plot": "plot config_name:str [length:float] [time_step: float] [-p] [-v] [-d]",
     "av": "av",
+    "sr": "sr name:str",
 }
 
 executable_commands = {
@@ -340,4 +353,5 @@ executable_commands = {
     "co": change_output_mode_input,
     "plot": plot_input,
     "av": input_get_viable_objects,
+    "sr": input_search_viable_objects,
 }

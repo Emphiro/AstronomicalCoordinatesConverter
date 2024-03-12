@@ -300,3 +300,18 @@ def get_viable_objects(start_time=19, end_time=6, cutoff=2, show_all=True) -> li
             result.append((name, config))
 
     return result
+
+
+def search_database_object(objects: list):
+    cur_time: Time = dc.normal_time_to_utc(2024, 3, 13, 0, 0, 0)
+    cur_lon: float = dms_to_deg(10, 53, 22)
+    cur_lat: float = dms_to_deg(49, 53, 6)
+    objects: list = si.get_objects(objects)
+    result = []
+    for (name, ra, dec) in objects:
+        ra_deg = hms_to_deg(*ra)
+        dec_deg = dms_to_deg(*dec)
+        config = Configuration(time=cur_time, ra=ra_deg, dec=dec_deg, lon=cur_lon, lat=cur_lat)
+        result.append((name, config))
+
+    return result

@@ -69,16 +69,23 @@ def parse(ra_dec: str) -> (float, float, float):
     return (*mapped, 0.0, 0.0)
 
 
-def get_objects() -> list:
-    table = Simbad.query_objects(object_names)
+def get_objects(names: list = None):
+    if names is None:
+        names = object_names
+
+    print(names)
+    object_table = Simbad.query_objects(names)
     objects = []
-    for i, name in enumerate(object_names):
-        object = table[i]
+    if object_table is None:
+        return None
+    print(object_table)
+    print("!")
+    for i, name in enumerate(names):
+        object = object_table[i]
         ra, dec = parse(object['RA']), parse(object['DEC'])
         values = (name, ra, dec)
         objects.append(values)
     return objects
-
 
 
 if __name__ == "__main__":
