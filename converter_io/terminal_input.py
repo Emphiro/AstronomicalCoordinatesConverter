@@ -268,14 +268,15 @@ def print_plot(values: list):
 def input_get_viable_objects(input_string: None):
     print("Fetching data. This may take some time...")
     objects = cm.get_viable_objects()
+    print(f"{len(objects)} viable objects found")
     for (name, config) in objects:
         print(f"Name: {name}")
         user_input: str = input("Show plot (y/n) ")
         show_plot: bool = parse_y_n(user_input)
         if show_plot:
             print(f"ra: {config.ra} dec: {config.dec}")
-            values = cm.plot_config(config, 24, 1)
-            print_plot(values)
+            values = cm.plot_config(config, 24, 0.2)
+            # print_plot(values)
             plotting.show_simple_plot(values, name, detailed=True)
 
 
@@ -287,7 +288,7 @@ def input_search_viable_objects(input_string: str):
         print(f"No objects with name {object_name} found")
     for (name, config) in objects:
         values = cm.plot_config(config, 24, 1)
-        print_plot(values)
+        # print_plot(values)
         plotting.show_simple_plot(values, name, detailed=True)
 
 

@@ -278,7 +278,7 @@ def plot_config(config: Configuration, length: float, step_size: float) -> list:
     return values
 
 
-def get_viable_objects(start_time=19, end_time=6, cutoff=2, show_all=True) -> list:
+def get_viable_objects(start_time=21, end_time=1, cutoff=2, show_all=False) -> list:
     cur_time: Time = dc.normal_time_to_utc(2024, 3, 13, 0, 0, 0)
     cur_lon: float = dms_to_deg(10, 53, 22)
     cur_lat: float = dms_to_deg(49, 53, 6)
@@ -298,7 +298,6 @@ def get_viable_objects(start_time=19, end_time=6, cutoff=2, show_all=True) -> li
             count_over_30 += el > 30 and (hour > start_time or hour < end_time)
         if count_over_30 > len(values) * (cutoff / 24) or show_all:
             result.append((name, config))
-
     return result
 
 

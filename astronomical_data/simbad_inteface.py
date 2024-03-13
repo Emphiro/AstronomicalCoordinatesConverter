@@ -79,7 +79,7 @@ def get_objects(names: list = None):
     if object_table is None:
         return None
     print(object_table)
-    print("!")
+    print()
     for i, name in enumerate(names):
         object = object_table[i]
         ra, dec = parse(object['RA']), parse(object['DEC'])
